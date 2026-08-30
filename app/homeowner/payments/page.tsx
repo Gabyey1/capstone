@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 
 type PaymentStatus =
   | "PENDING"
@@ -106,46 +106,36 @@ function statusClasses(status: PaymentStatus) {
   }
 }
 
-export default function HomeownerPaymentsPage() {
+function HomeownerPaymentsContent() {
   const searchParams = useSearchParams();
 
-  const selectedDueId =
-    searchParams.get("dueId");
+  const selectedDueId = searchParams.get("dueId");
 
-  const paymentResult =
-    searchParams.get("payment");
+  const paymentResult = searchParams.get("payment");
 
   const [payments, setPayments] = useState<Payment[]>([]);
-  const [selectedDue, setSelectedDue] =
-    useState<Due | null>(null);
+  const [selectedDue, setSelectedDue] = useState<Due | null>(null);
 
-  const [loading, setLoading] =
-    useState(true);
+  const [loading, setLoading] = useState(true);
 
-  const [checkoutLoading, setCheckoutLoading] =
-    useState(false);
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
 
-  const [error, setError] =
-    useState("");
+  const [error, setError] = useState("");
 
-  const [checkoutError, setCheckoutError] =
-    useState("");
+  const [checkoutError, setCheckoutError] = useState("");
 
   async function loadPayments() {
     try {
       setLoading(true);
       setError("");
 
-      const response = await fetch(
-        "/api/homeowner/payments"
-      );
+      const response = await fetch("/api/homeowner/payments");
 
       const data = await response.json();
 
       if (!response.ok) {
         throw new Error(
-          data.error ||
-            "Unable to load your payments."
+          data.error || "Unable to load your payments."
         );
       }
 
@@ -170,16 +160,13 @@ export default function HomeownerPaymentsPage() {
     }
 
     try {
-      const response = await fetch(
-        "/api/homeowner/dues"
-      );
+      const response = await fetch("/api/homeowner/dues");
 
       const data = await response.json();
 
       if (!response.ok) {
         throw new Error(
-          data.error ||
-            "Unable to load the selected due."
+          data.error || "Unable to load the selected due."
         );
       }
 
@@ -187,8 +174,7 @@ export default function HomeownerPaymentsPage() {
 
       const due = dues.find(
         (item) =>
-          String(item.id) ===
-          String(selectedDueId)
+          String(item.id) === String(selectedDueId)
       );
 
       if (!due) {
@@ -245,13 +231,11 @@ export default function HomeownerPaymentsPage() {
 
       if (!response.ok) {
         throw new Error(
-          data.error ||
-            "Unable to start payment."
+          data.error || "Unable to start payment."
         );
       }
 
-      const checkoutUrl =
-        data.checkout?.url;
+      const checkoutUrl = data.checkout?.url;
 
       if (!checkoutUrl) {
         throw new Error(
@@ -259,14 +243,6 @@ export default function HomeownerPaymentsPage() {
         );
       }
 
-      /*
-       * Redirect the homeowner to the
-       * PayMongo hosted checkout page.
-       *
-       * Using location.assign() avoids the
-       * React hook immutability warning caused
-       * by directly modifying window.location.href.
-       */
       window.location.assign(checkoutUrl);
     } catch (err) {
       console.error(err);
@@ -384,9 +360,7 @@ export default function HomeownerPaymentsPage() {
                 </p>
 
                 <p className="mt-1 text-3xl font-bold text-gray-900">
-                  {formatAmount(
-                    selectedDue.balance
-                  )}
+                  {formatAmount(selectedDue.balance)}
                 </p>
               </div>
 
@@ -568,9 +542,7 @@ export default function HomeownerPaymentsPage() {
                       </td>
 
                       <td className="px-6 py-4 text-sm font-semibold text-gray-900">
-                        {formatAmount(
-                          payment.amount
-                        )}
+                        {formatAmount(payment.amount)}
                       </td>
 
                       <td className="px-6 py-4 text-sm text-gray-700">
@@ -578,14 +550,11 @@ export default function HomeownerPaymentsPage() {
                       </td>
 
                       <td className="px-6 py-4 text-sm text-gray-600">
-                        {payment.referenceNumber ||
-                          "—"}
+                        {payment.referenceNumber || "—"}
                       </td>
 
                       <td className="px-6 py-4 text-sm text-gray-600">
-                        {payment.receipt
-                          ?.receiptNumber ||
-                          "—"}
+                        {payment.receipt?.receiptNumber || "—"}
                       </td>
 
                       <td className="px-6 py-4">
@@ -622,5 +591,25 @@ export default function HomeownerPaymentsPage() {
 
       </div>
     </main>
+  );
+}
+
+export default function HomeownerPaymentsPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="min-h-screen bg-gray-100 p-8">
+          <div className="mx-auto max-w-7xl">
+            <div className="rounded-2xl bg-white p-10 text-center shadow">
+              <p className="text-sm text-gray-500">
+                Loading payment history...
+              </p>
+            </div>
+          </div>
+        </main>
+      }
+    >
+      <HomeownerPaymentsContent />
+    </Suspense>
   );
 }
