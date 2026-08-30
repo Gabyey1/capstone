@@ -25,40 +25,65 @@ export const authOptions: NextAuthOptions = {
       },
 
       async authorize(credentials) {
+        console.log("[AUTH] authorize() started");
+
         if (!credentials?.email || !credentials?.password) {
+          console.log("[AUTH] Missing email or password");
           return null;
         }
 
         const email = credentials.email.trim().toLowerCase();
 
-        const user = await prisma.user.findUnique({
-          where: {
-            email,
-          },
-        });
+        console.log("[AUTH] Looking up user:", email);
 
-        if (!user) {
+        try {
+          const user = await prisma.user.findUnique({
+            where: {
+              email,
+            },
+          });
+
+          console.log("[AUTH] Database query completed");
+          console.log("[AUTH] User found:", !!user);
+
+          if (!user) {
+            console.log("[AUTH] User NOT found");
+            return null;
+          }
+
+          console.log("[AUTH] User status:", user.status);
+          console.log("[AUTH] User role:", user.role);
+
+          if (user.status !== "ACTIVE") {
+            console.log("[AUTH] User is not ACTIVE");
+            return null;
+          }
+
+          console.log("[AUTH] Starting password comparison");
+
+          const passwordIsValid = await compare(
+            credentials.password,
+            user.passwordHash
+          );
+
+          console.log("[AUTH] Password valid:", passwordIsValid);
+
+          if (!passwordIsValid) {
+            console.log("[AUTH] Password comparison FAILED");
+            return null;
+          }
+
+          console.log("[AUTH] Authentication SUCCESS");
+
+          return {
+            id: String(user.id),
+            email: user.email,
+            role: user.role,
+          };
+        } catch (error) {
+          console.error("[AUTH] Authentication error:", error);
           return null;
         }
-
-        if (user.status !== "ACTIVE") {
-          return null;
-        }
-
-        const passwordIsValid = await compare(
-          credentials.password,
-          user.passwordHash
-        );
-
-        if (!passwordIsValid) {
-          return null;
-        }
-
-        return {
-          id: String(user.id),
-          email: user.email,
-          role: user.role,
-        };
       },
     }),
   ],
